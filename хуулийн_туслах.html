@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Хуулийн Туслах — Legal Assistant</title>
+
+<!-- External libraries (loaded from CDN, no install needed) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+
+/* ── HEADER ── */
+.header{background:#1a1a2e;color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.header-left{display:flex;align-items:center;gap:10px}
+.header h1{font-size:17px;font-weight:700}
+.header p{font-size:11px;opacity:.65}
+.key-mini{display:flex;align-items:center;gap:6px}
+.key-mini input{padding:6px 10px;border:1.5px solid #ffffff33;border-radius:6px;background:#ffffff15;color:#fff;font-size:12px;font-family:monospace;width:260px}
+.key-mini input::placeholder{color:#ffffff66}
+.key-mini input:focus{outline:none;border-color:#60a5fa}
+.key-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0}
+.key-dot.ok{background:#22c55e}
+
+/* ── NAV ── */
+.nav{background:#fff;border-bottom:2px solid #e5e7eb;display:flex;overflow-x:auto}
+.nav-btn{padding:14px 22px;border:none;background:transparent;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;white-space:nowrap;border-bottom:3px solid transparent;transition:all .2s}
+.nav-btn:hover{color:#1a1a2e}
+.nav-btn.active{color:#1a1a2e;border-bottom-color:#1a1a2e}
+.nav-icon{margin-right:5px}
+
+/* ── CONTAINER ── */
+.container{max-width:920px;margin:24px auto;padding:0 16px 60px}
+
+/* ── CARD ── */
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 5px rgba(0,0,0,.07)}
+.card-title{font-size:13px;font-weight:700;color:#374151;margin-bottom:14px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.4px}
+
+/* ── SUB-TABS ── */
+.stabs{display:flex;gap:3px;background:#f1f5f9;padding:3px;border-radius:9px;margin-bottom:16px}
+.stab{flex:1;padding:8px 6px;border:none;background:transparent;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;color:#6b7280;transition:all .18s;white-space:nowrap;text-align:center}
+.stab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+/* ── UPLOAD ZONE ── */
+.drop-zone{border:2px dashed #d1d5db;border-radius:9px;padding:26px;text-align:center;cursor:pointer;transition:all .2s;background:#fafafa}
+.drop-zone:hover,.drop-zone.drag{border-color:#2563eb;background:#eff6ff}
+.drop-zone .dicon{font-size:30px;margin-bottom:6px}
+.drop-zone p{color:#6b7280;font-size:13px}
+.drop-zone strong{color:#2563eb}
+.file-badge{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:8px 12px;font-size:12px;color:#166534;display:flex;align-items:center;gap:6px;margin-top:8px}
+
+/* ── TEXTAREA ── */
+.ta{width:100%;min-height:130px;padding:11px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;line-height:1.65;resize:vertical;font-family:inherit}
+.ta:focus{outline:none;border-color:#2563eb}
+.ta.tall{min-height:200px}
+.ta.short{min-height:80px}
+
+.or-line{text-align:center;color:#9ca3af;font-size:12px;margin:12px 0;position:relative}
+.or-line::before,.or-line::after{content:'';position:absolute;top:50%;width:46%;height:1px;background:#e5e7eb}
+.or-line::before{left:0}.or-line::after{right:0}
+
+/* ── FORM ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:600px){.form-row,.form-row3{grid-template-columns:1fr}}
+label.fl{display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px}
+select,input.fi{width:100%;padding:8px 10px;border:1.5px solid #d1d5db;border-radius:7px;font-size:13px;background:#fff;color:#1a1a2e}
+select:focus,input.fi:focus{outline:none;border-color:#2563eb}
+
+/* ── BUTTONS ── */
+.btn-primary{background:#1a1a2e;color:#fff;border:none;padding:13px;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;width:100%;transition:background .2s}
+.btn-primary:hover{background:#2d2d4e}
+.btn-primary:disabled{background:#9ca3af;cursor:not-allowed}
+.btn-secondary{background:#fff;color:#1a1a2e;border:1.5px solid #1a1a2e;padding:9px 16px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;margin-right:8px;margin-top:14px}
+.btn-secondary:hover{background:#f1f5f9}
+.btn-sm{background:#1a1a2e;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;margin-right:6px;margin-top:10px}
+
+/* ── LOADING ── */
+.loading-box{text-align:center;padding:40px}
+.spinner{width:36px;height:36px;border:4px solid #e5e7eb;border-top-color:#1a1a2e;border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-box p{color:#6b7280;font-size:13px}
+.loading-box small{color:#9ca3af;font-size:12px}
+
+/* ── RESULT AREAS ── */
+.result-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-top:14px;font-size:13px;line-height:1.8;white-space:pre-wrap;max-height:600px;overflow-y:auto;color:#374151}
+.result-section{margin-bottom:16px}
+.result-section h3{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid #e5e7eb}
+
+/* Issue colors */
+.tag-high{background:#fee2e2;color:#dc2626;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}
+.tag-mid{background:#fef3c7;color:#b45309;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}
+.tag-low{background:#dbeafe;color:#1d4ed8;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}
+.tag-ok{background:#dcfce7;color:#166534;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700}
+
+/* Track changes */
+.tc-add{background:#dcfce7;color:#166534;text-decoration:underline}
+.tc-del{background:#fee2e2;color:#dc2626;text-decoration:line-through}
+
+/* Court table */
+.court-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px}
+.court-table th{background:#1a1a2e;color:#fff;padding:7px 10px;text-align:left;font-size:11px}
+.court-table td{padding:7px 10px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+.court-table tr:nth-child(even) td{background:#f9fafb}
+
+/* Convert preview */
+.extract-box{background:#1e293b;color:#e2e8f0;border-radius:8px;padding:14px;font-size:12px;line-height:1.7;max-height:300px;overflow-y:auto;font-family:monospace;white-space:pre-wrap;margin-top:10px}
+
+.legalinfo-note{font-size:11px;color:#9ca3af;margin-top:8px;padding:6px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid #3b82f6}
+
+.hidden{display:none}
+.section{display:none}
+.section.active{display:block}
+.pane{display:none}
+.pane.active{display:block}
+
+.progress-bar{width:100%;background:#e5e7eb;border-radius:4px;height:6px;margin-top:8px}
+.progress-fill{background:#2563eb;border-radius:4px;height:6px;transition:width .3s}
+.progress-label{font-size:11px;color:#6b7280;margin-top:4px}
+</style>
+</head>
+<body>
+
+<!-- ═══════ HEADER ═══════ -->
+<div class="header">
+  <div class="header-left">
+    <span style="font-size:22px">⚖️</span>
+    <div>
+      <h1>Хуулийн Туслах</h1>
+      <p>Гэрээ · Файл хөрвүүлэх · Шүүхийн бэлтгэл</p>
+    </div>
+  </div>
+  <div class="key-mini">
+    <div class="key-dot" id="keyDot"></div>
+    <input type="password" id="apiKey" placeholder="sk-ant-... API key оруулна уу" oninput="onKeyInput()" />
+  </div>
+</div>
+
+<!-- ═══════ NAV ═══════ -->
+<div class="nav">
+  <button class="nav-btn active" onclick="showSection('contracts')">
+    <span class="nav-icon">📋</span>Гэрээ
+  </button>
+  <button class="nav-btn" onclick="showSection('convert')">
+    <span class="nav-icon">🔄</span>Файл хөрвүүлэх
+  </button>
+  <button class="nav-btn" onclick="showSection('court')">
+    <span class="nav-icon">🏛️</span>Шүүхийн бэлтгэл
+  </button>
+</div>
+
+<div class="container">
+
+<!-- ══════════════════════════════════════
+     SECTION 1: CONTRACTS
+══════════════════════════════════════ -->
+<div class="section active" id="section-contracts">
+
+  <!-- Sub-tabs -->
+  <div class="stabs">
+    <button class="stab active" onclick="showPane('contracts','review')">🔍 Гэрээ хянах</button>
+    <button class="stab" onclick="showPane('contracts','suggest')">✏️ Санал боловсруулах</button>
+    <button class="stab" onclick="showPane('contracts','draft')">📝 Гэрээний төсөл</button>
+  </div>
+
+  <!-- ── REVIEW ── -->
+  <div class="pane active" id="contracts-review">
+    <div class="card">
+      <div class="card-title">📄 Гэрээний текст</div>
+      <div class="drop-zone" id="cr-zone">
+        <div class="dicon">📂</div>
+        <p><strong>Файл сонгох</strong> эсвэл чирэх (.docx · .txt · .pdf)</p>
+        <input type="file" id="cr-file" accept=".docx,.doc,.txt,.pdf" style="display:none"/>
+      </div>
+      <div class="file-badge hidden" id="cr-badge">📄 <span id="cr-fname"></span></div>
+      <div class="or-line">эсвэл текст paste хийх</div>
+      <textarea class="ta" id="cr-text" placeholder="Гэрээний текстийг энд оруулна уу..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">⚙️ Тохиргоо</div>
+      <div class="form-row3">
+        <div><label class="fl">Гэрээний төрөл</label>
+          <select id="cr-type">
+            <option value="auto">Автомат</option>
+            <option value="худалдааны">Худалдааны</option>
+            <option value="хөдөлмөрийн">Хөдөлмөрийн</option>
+            <option value="түрээсийн">Түрээсийн</option>
+            <option value="үйлчилгээний">Үйлчилгээний</option>
+            <option value="зээлийн">Зээлийн</option>
+            <option value="хамтын ажиллагааны">Хамтын ажиллагааны</option>
+            <option value="олон улсын">Олон улсын</option>
+          </select></div>
+        <div><label class="fl">Хуулийн хүрээ</label>
+          <select id="cr-juris">
+            <option value="mn">Монголын хууль</option>
+            <option value="intl">Олон улсын</option>
+            <option value="both">Хоёуланг нь</option>
+          </select></div>
+        <div><label class="fl">AI загвар</label>
+          <select id="cr-model">
+            <option value="claude-haiku-4-5-20251001">Haiku (хурдан)</option>
+            <option value="claude-sonnet-4-6">Sonnet (нарийн)</option>
+          </select></div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="contractReview()">🔍 Гэрээ хянах</button>
+    <div class="card hidden" id="cr-loading"><div class="loading-box"><div class="spinner"></div><p>Гэрээг хянаж байна...</p><small>legalinfo.mn хуулиудыг ашиглаж байна</small></div></div>
+    <div class="card hidden" id="cr-result">
+      <div class="card-title">📊 Хянасан үр дүн</div>
+      <div id="cr-output" class="result-box"></div>
+      <div class="legalinfo-note">⚠️ Хуулийн иш татлагыг legalinfo.mn сайтаас шалгаарай — хамгийн сүүлийн хүчинтэй хуулийг ашиглана уу.</div>
+      <button class="btn-secondary" onclick="dlText('cr-output','гэрээ_хянасан')">⬇️ .txt татах</button>
+      <button class="btn-secondary" onclick="dlDoc('cr-output','гэрээ_хянасан')">⬇️ Word татах</button>
+    </div>
+  </div>
+
+  <!-- ── SUGGEST ── -->
+  <div class="pane hidden" id="contracts-suggest">
+    <div class="card">
+      <div class="card-title">📄 Гэрээний текст</div>
+      <div class="drop-zone" id="cs-zone">
+        <div class="dicon">📂</div>
+        <p><strong>Файл сонгох</strong> эсвэл чирэх</p>
+        <input type="file" id="cs-file" accept=".docx,.doc,.txt,.pdf" style="display:none"/>
+      </div>
+      <div class="file-badge hidden" id="cs-badge">📄 <span id="cs-fname"></span></div>
+      <div class="or-line">эсвэл текст paste хийх</div>
+      <textarea class="ta" id="cs-text" placeholder="Засвар оруулах гэрээний текст..."></textarea>
+    </div>
+    <div class="card">
+      <div class="card-title">💡 Санал/Чиглэл</div>
+      <textarea class="ta short" id="cs-direction" placeholder="Жишээ: Нэхэмжлэгчийн талд, хариуцлагын хэсгийг хүчтэй болгох, торгуулийн заалт нэмэх..."></textarea>
+      <div class="form-row" style="margin-top:12px">
+        <div><label class="fl">Чиглэл</label>
+          <select id="cs-side">
+            <option value="balanced">Тэнцвэртэй</option>
+            <option value="buyer">Худалдан авагчийн талд</option>
+            <option value="seller">Худалдагчийн талд</option>
+            <option value="employee">Ажилтны талд</option>
+            <option value="employer">Ажил олгогчийн талд</option>
+            <option value="lessor">Түрээслэгчийн талд</option>
+            <option value="lessee">Түрээсийн талд</option>
+          </select></div>
+        <div><label class="fl">AI загвар</label>
+          <select id="cs-model">
+            <option value="claude-haiku-4-5-20251001">Haiku</option>
+            <option value="claude-sonnet-4-6">Sonnet</option>
+          </select></div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="contractSuggest()">✏️ Санал боловсруулах</button>
+    <div class="card hidden" id="cs-loading"><div class="loading-box"><div class="spinner"></div><p>Санал боловсруулж байна...</p></div></div>
+    <div class="card hidden" id="cs-result">
+      <div class="card-title">✏️ Засварын санал (Track Changes)</div>
+      <div id="cs-output" class="result-box"></div>
+      <div class="legalinfo-note">⚠️ Хуулийн иш татлагыг legalinfo.mn-ээс шалгана уу.</div>
+      <button class="btn-secondary" onclick="dlText('cs-output','гэрээ_санал')">⬇️ .txt татах</button>
+      <button class="btn-secondary" onclick="dlDoc('cs-output','гэрээ_санал')">⬇️ Word татах</button>
+    </div>
+  </div>
+
+  <!-- ── DRAFT ── -->
+  <div class="pane hidden" id="contracts-draft">
+    <div class="card">
+      <div class="card-title">📝 Гэрээний мэдээлэл</div>
+      <div class="form-row">
+        <div><label class="fl">Гэрээний төрөл</label>
+          <select id="cd-type">
+            <option value="худалдааны">Худалдах-худалдан авах гэрээ</option>
+            <option value="хөдөлмөрийн">Хөдөлмөрийн гэрээ</option>
+            <option value="түрээсийн">Түрээсийн гэрээ</option>
+            <option value="үйлчилгээний">Үйлчилгээний гэрээ</option>
+            <option value="зээлийн">Зээлийн гэрээ</option>
+            <option value="хамтын ажиллагааны">Хамтын ажиллагааны гэрээ</option>
+            <option value="нийлүүлэлтийн">Нийлүүлэлтийн гэрээ</option>
+            <option value="оюуны өмчийн">Оюуны өмч шилжүүлэх гэрээ</option>
+          </select></div>
+        <div><label class="fl">Хэл</label>
+          <select id="cd-lang">
+            <option value="mn">Монгол</option>
+            <option value="en">English</option>
+            <option value="both">Хоёр хэл (МН + EN)</option>
+          </select></div>
+      </div>
+      <div class="form-row">
+        <div><label class="fl">Нэг тал (Нэр/Байгууллага)</label>
+          <input class="fi" id="cd-party1" placeholder="ХХК, иргэн нэр..."/></div>
+        <div><label class="fl">Нөгөө тал</label>
+          <input class="fi" id="cd-party2" placeholder="ХХК, иргэн нэр..."/></div>
+      </div>
+      <label class="fl">Гэрээний гол нөхцөл, онцлог шаардлага</label>
+      <textarea class="ta" id="cd-details" placeholder="Жишээ: Үнэ 50 сая₮, хугацаа 2 жил, Улаанбаатар хотод, торгуулийн заалт хатуу байх, давж заалдах шатны шүүхэд маргаан шийдвэрлэх..."></textarea>
+      <div style="margin-top:12px">
+        <label class="fl">AI загвар</label>
+        <select id="cd-model" style="width:200px">
+          <option value="claude-haiku-4-5-20251001">Haiku</option>
+          <option value="claude-sonnet-4-6">Sonnet (илүү нарийн)</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="contractDraft()">📝 Гэрээний төсөл бэлдэх</button>
+    <div class="card hidden" id="cd-loading"><div class="loading-box"><div class="spinner"></div><p>Гэрээний төсөл бичиж байна...</p><small>Монголын стандартад нийцүүлж байна</small></div></div>
+    <div class="card hidden" id="cd-result">
+      <div class="card-title">📝 Гэрээний төсөл</div>
+      <div id="cd-output" class="result-box"></div>
+      <div class="legalinfo-note">⚠️ Эцсийн гэрээг хуульч мэргэжилтнээр нягтлуулахыг зөвлөж байна.</div>
+      <button class="btn-secondary" onclick="dlText('cd-output','гэрээний_төсөл')">⬇️ .txt татах</button>
+      <button class="btn-secondary" onclick="dlDoc('cd-output','гэрээний_төсөл')">⬇️ Word татах</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION 2: FILE CONVERSION
+══════════════════════════════════════ -->
+<div class="section hidden" id="section-convert">
+  <div class="card">
+    <div class="card-title">🔄 Файл → Word хөрвүүлэгч</div>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:14px">PDF, PNG, JPG, JPEG, DOCX зэрэг файлын текстийг гарган авч Word (.doc) форматаар татна.</p>
+
+    <div class="drop-zone" id="cv-zone">
+      <div class="dicon">📁</div>
+      <p><strong>Файл сонгох</strong> эсвэл чирэх</p>
+      <p style="margin-top:4px;font-size:12px">.pdf · .png · .jpg · .jpeg · .docx · .txt</p>
+      <input type="file" id="cv-file" accept=".pdf,.png,.jpg,.jpeg,.docx,.doc,.txt" style="display:none"/>
+    </div>
+    <div class="file-badge hidden" id="cv-badge">📄 <span id="cv-fname"></span></div>
+
+    <div style="margin-top:14px">
+      <div class="progress-bar hidden" id="cv-progress-bar"><div class="progress-fill" id="cv-progress-fill" style="width:0%"></div></div>
+      <div class="progress-label hidden" id="cv-progress-label"></div>
+    </div>
+  </div>
+
+  <div class="card" id="cv-options" style="display:none">
+    <div class="card-title">⚙️ Тохиргоо</div>
+    <div class="form-row">
+      <div><label class="fl">Зурган файлын хэл (OCR)</label>
+        <select id="cv-ocrlang">
+          <option value="mn+eng">Монгол + Англи</option>
+          <option value="mn">Монгол</option>
+          <option value="eng">English</option>
+          <option value="claude">Claude AI (нарийн)</option>
+        </select></div>
+      <div><label class="fl">Гаралт</label>
+        <select id="cv-out">
+          <option value="word">Word (.doc)</option>
+          <option value="txt">Текст (.txt)</option>
+        </select></div>
+    </div>
+    <button class="btn-primary" id="cv-btn" onclick="convertFile()">🔄 Хөрвүүлэх</button>
+  </div>
+
+  <div class="card hidden" id="cv-loading"><div class="loading-box"><div class="spinner"></div><p id="cv-status">Файл боловсруулж байна...</p><small>Tesseract OCR / Claude Vision ашиглаж байна</small></div></div>
+
+  <div class="card hidden" id="cv-result">
+    <div class="card-title">✅ Гарган авсан текст</div>
+    <div id="cv-output" class="extract-box"></div>
+    <button class="btn-secondary" onclick="dlDoc('cv-output','хөрвүүлсэн_файл')">⬇️ Word татах</button>
+    <button class="btn-secondary" onclick="dlText('cv-output','хөрвүүлсэн_файл')">⬇️ .txt татах</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SECTION 3: COURT PREPARATION
+══════════════════════════════════════ -->
+<div class="section hidden" id="section-court">
+
+  <div class="stabs">
+    <button class="stab active" onclick="showPane('court','brief')">📋 Хэргийн товьёог</button>
+    <button class="stab" onclick="showPane('court','hearing')">🏛️ Шүүх хуралдааны бэлтгэл</button>
+    <button class="stab" onclick="showPane('court','similar')">🔎 Ижил шийдвэр</button>
+  </div>
+
+  <!-- ── CASE BRIEF ── -->
+  <div class="pane active" id="court-brief">
+    <div class="card">
+      <div class="card-title">🏛️ Хэргийн үндсэн мэдээлэл</div>
+      <div class="form-row">
+        <div><label class="fl">Шүүх</label>
+          <input class="fi" id="cb-court" placeholder="Жишээ: БЗД Иргэний хэргийн тойргийн шүүх"/></div>
+        <div><label class="fl">Хэргийн дугаар</label>
+          <input class="fi" id="cb-case-no" placeholder="182/ШШ2024/01234"/></div>
+      </div>
+      <div class="form-row">
+        <div><label class="fl">Нэхэмжлэгч</label>
+          <input class="fi" id="cb-plaintiff" placeholder="Нэр, өмгөөлөгч..."/></div>
+        <div><label class="fl">Хариуцагч</label>
+          <input class="fi" id="cb-defendant" placeholder="Нэр, байгууллага..."/></div>
+      </div>
+      <div><label class="fl">Нэхэмжлэлийн шаардлага</label>
+        <textarea class="ta short" id="cb-claim" placeholder="Юу шаардаж байгаа, ямар хэмжээний..."></textarea></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📄 Хэргийн материал (текст оруулах)</div>
+      <div class="drop-zone" id="cb-zone">
+        <div class="dicon">📂</div>
+        <p><strong>Хэргийн баримт бичгийн файл</strong> оруулах (.docx · .txt · .pdf)</p>
+        <input type="file" id="cb-file" accept=".docx,.doc,.txt,.pdf" style="display:none"/>
+      </div>
+      <div class="file-badge hidden" id="cb-badge">📄 <span id="cb-fname"></span></div>
+      <div class="or-line">эсвэл баримт бичгийн текст</div>
+      <textarea class="ta tall" id="cb-docs" placeholder="Хэргийн баримт бичиг, он цагийн дараалал, нотлох баримт зэрэг мэдээллийг энд оруулна уу..."></textarea>
+      <div style="margin-top:12px">
+        <label class="fl">AI загвар</label>
+        <select id="cb-model" style="width:200px">
+          <option value="claude-haiku-4-5-20251001">Haiku</option>
+          <option value="claude-sonnet-4-6">Sonnet (нарийн)</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="courtBrief()">📋 Хэргийн товьёог бэлдэх</button>
+    <div class="card hidden" id="cb-loading"><div class="loading-box"><div class="spinner"></div><p>Хэргийн товьёог бэлдэж байна...</p><small>legalinfo.mn хуулиудыг ашиглаж байна</small></div></div>
+    <div class="card hidden" id="cb-result">
+      <div class="card-title">📋 Хэргийн товьёог</div>
+      <div id="cb-output" class="result-box"></div>
+      <div class="legalinfo-note">⚠️ Хуулийн заалтуудыг legalinfo.mn-ээс нягтлан шалгаарай.</div>
+      <button class="btn-secondary" onclick="dlText('cb-output','хэргийн_товьёог')">⬇️ .txt татах</button>
+      <button class="btn-secondary" onclick="dlDoc('cb-output','хэргийн_товьёог')">⬇️ Word татах</button>
+    </div>
+  </div>
+
+  <!-- ── HEARING PREP ── -->
+  <div class="pane hidden" id="court-hearing">
+    <div class="card">
+      <div class="card-title">🏛️ Шүүх хуралдааны мэдээлэл</div>
+      <div class="form-row">
+        <div><label class="fl">Хуралдааны огноо</label>
+          <input class="fi" type="date" id="ch-date"/></div>
+        <div><label class="fl">Шүүгч</label>
+          <input class="fi" id="ch-judge" placeholder="Шүүгчийн нэр..."/></div>
+      </div>
+      <div><label class="fl">Таны байр суурь / Хамгаалах чиглэл</label>
+        <textarea class="ta short" id="ch-position" placeholder="Жишээ: Нэхэмжлэлийг бүрэн хангуулах, нотлох баримт: ..., хариуцагчаас асуух асуулт: ..."></textarea></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📄 Хэргийн материал</div>
+      <div class="drop-zone" id="ch-zone">
+        <div class="dicon">📂</div>
+        <p><strong>Хэргийн баримт бичиг</strong> (.docx · .txt · .pdf)</p>
+        <input type="file" id="ch-file" accept=".docx,.doc,.txt,.pdf" style="display:none"/>
+      </div>
+      <div class="file-badge hidden" id="ch-badge">📄 <span id="ch-fname"></span></div>
+      <div class="or-line">эсвэл текст</div>
+      <textarea class="ta tall" id="ch-docs" placeholder="Шүүх хуралдаанд бэлдэх материалыг энд оруулна уу — хэргийн товьёог, нотлох баримт, давж заалдсан магадлал г.м..."></textarea>
+      <div style="margin-top:12px">
+        <label class="fl">AI загвар</label>
+        <select id="ch-model" style="width:200px">
+          <option value="claude-haiku-4-5-20251001">Haiku</option>
+          <option value="claude-sonnet-4-6">Sonnet</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="courtHearing()">🏛️ Шүүх хуралдааны бэлтгэл хийх</button>
+    <div class="card hidden" id="ch-loading"><div class="loading-box"><div class="spinner"></div><p>Шүүх хуралдааны бэлтгэлийн материал боловсруулж байна...</p></div></div>
+    <div class="card hidden" id="ch-result">
+      <div class="card-title">🏛️ Шүүх хуралдааны бэлтгэл</div>
+      <div id="ch-output" class="result-box"></div>
+      <div class="legalinfo-note">⚠️ Хуулийн иш татлагыг legalinfo.mn-ээс нягтлаарай. Шүүхийн дугаарлалтыг шалгаарай.</div>
+      <button class="btn-secondary" onclick="dlText('ch-output','шүүх_бэлтгэл')">⬇️ .txt татах</button>
+      <button class="btn-secondary" onclick="dlDoc('ch-output','шүүх_бэлтгэл')">⬇️ Word татах</button>
+    </div>
+  </div>
+
+  <!-- ── SIMILAR CASES ── -->
+  <div class="pane hidden" id="court-similar">
+    <div class="card">
+      <div class="card-title">🔎 Ижил төстэй шүүхийн шийдвэр хайх</div>
+      <div class="form-row">
+        <div><label class="fl">Хэргийн ангилал</label>
+          <select id="sim-type">
+            <option value="civil">Иргэний хэрэг</option>
+            <option value="commercial">Арилжааны маргаан</option>
+            <option value="labor">Хөдөлмөрийн маргаан</option>
+            <option value="property">Өмч, үл хөдлөх хөрөнгийн маргаан</option>
+            <option value="family">Гэр бүлийн маргаан</option>
+            <option value="administrative">Захиргааны маргаан</option>
+            <option value="criminal">Эрүүгийн хэрэг</option>
+          </select></div>
+        <div><label class="fl">AI загвар</label>
+          <select id="sim-model">
+            <option value="claude-haiku-4-5-20251001">Haiku</option>
+            <option value="claude-sonnet-4-6">Sonnet</option>
+          </select></div>
+      </div>
+      <label class="fl">Хэргийн талаарх мэдээлэл</label>
+      <textarea class="ta" id="sim-desc" placeholder="Хэргийн гол цөм, маргааны объект, хэн нэхэмжилсэн, юуг маргасан, ямар хуулийн заалт холбогдоно гэж үзэж байна..."></textarea>
+    </div>
+    <button class="btn-primary" onclick="similarCases()">🔎 Ижил шийдвэр хайх</button>
+    <div class="card hidden" id="sim-loading"><div class="loading-box"><div class="spinner"></div><p>Ижил төстэй шийдвэр хайж байна...</p></div></div>
+    <div class="card hidden" id="sim-result">
+      <div class="card-title">🔎 Ижил төстэй шийдвэрүүд</div>
+      <div id="sim-output" class="result-box"></div>
+      <div class="legalinfo-note">💡 Шийдвэрүүдийг Монгол Улсын Шүүхийн Мэдээллийн Нэгдсэн Систем (shuukh.mn) болон legalinfo.mn-ээс нягтлаарай.</div>
+      <button class="btn-secondary" onclick="dlText('sim-output','ижил_шийдвэр')">⬇️ .txt татах</button>
+    </div>
+  </div>
+
+</div><!-- /section-court -->
+</div><!-- /container -->
+
+<!-- ═══════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════ -->
+<script>
+// Configure PDF.js worker
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ── SECTION / PANE NAV ──────────────────────────
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+const paneState = {};
+function showPane(section, name) {
+  const btns = event.currentTarget.parentElement.querySelectorAll('.stab');
+  btns.forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const panes = document.querySelectorAll('#section-'+section+' .pane');
+  panes.forEach(p => { p.classList.remove('active'); p.classList.add('hidden'); });
+  const target = document.getElementById(section+'-'+name);
+  if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
+}
+
+// ── API KEY ──────────────────────────────────────
+window.onload = () => {
+  const k = localStorage.getItem('legal_api_key');
+  if (k) { document.getElementById('apiKey').value = k; setKeyDot(true); }
+  setupDropZone('cr-zone','cr-file','cr-badge','cr-fname', readDoc, 'cr-text');
+  setupDropZone('cs-zone','cs-file','cs-badge','cs-fname', readDoc, 'cs-text');
+  setupDropZone('cd-zone','cd-file',null,null,null,null);
+  setupDropZone('cv-zone','cv-file','cv-badge','cv-fname', null, null, onConvertFile);
+  setupDropZone('cb-zone','cb-file','cb-badge','cb-fname', readDoc, 'cb-docs');
+  setupDropZone('ch-zone','ch-file','ch-badge','ch-fname', readDoc, 'ch-docs');
+};
+
+function onKeyInput() {
+  const v = document.getElementById('apiKey').value.trim();
+  if (v.startsWith('sk-ant-') && v.length > 20) {
+    localStorage.setItem('legal_api_key', v);
+    setKeyDot(true);
+  } else {
+    setKeyDot(false);
+  }
+}
+
+function setKeyDot(ok) {
+  const d = document.getElementById('keyDot');
+  d.className = 'key-dot' + (ok ? ' ok' : '');
+}
+
+function getKey() {
+  const k = document.getElementById('apiKey').value.trim();
+  if (!k || !k.startsWith('sk-ant-')) { alert('API key оруулна уу (дээрх талбарт)'); return null; }
+  return k;
+}
+
+// ── SHARED: CALL CLAUDE API ──────────────────────
+async function callClaude(model, prompt, imageB64=null, imageMime=null) {
+  const key = getKey();
+  if (!key) throw new Error('API key байхгүй');
+  const content = [];
+  if (imageB64) {
+    content.push({ type: 'image', source: { type: 'base64', media_type: imageMime, data: imageB64 } });
+  }
+  content.push({ type: 'text', text: prompt });
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model, max_tokens: 4096, messages: [{ role:'user', content }] })
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(()=>({}));
+    throw new Error(e.error?.message || 'API алдаа '+r.status);
+  }
+  const d = await r.json();
+  return d.content[0].text;
+}
+
+function setUI(loadId, resultId, loading) {
+  document.getElementById(loadId).classList.toggle('hidden', !loading);
+  if (!loading) document.getElementById(resultId).classList.remove('hidden');
+}
+
+// ── FILE READING ─────────────────────────────────
+function setupDropZone(zoneId, fileId, badgeId, fnameId, onRead, textareaId, onFile=null) {
+  const zone = document.getElementById(zoneId);
+  const fi   = document.getElementById(fileId);
+  if (!zone || !fi) return;
+  zone.onclick = () => fi.click();
+  zone.ondragover = e => { e.preventDefault(); zone.classList.add('drag'); };
+  zone.ondragleave = () => zone.classList.remove('drag');
+  zone.ondrop = e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); };
+  fi.onchange = e => handleFile(e.target.files[0]);
+
+  async function handleFile(f) {
+    if (!f) return;
+    if (badgeId) {
+      document.getElementById(fnameId).textContent = f.name+' ('+(f.size/1024).toFixed(0)+' KB)';
+      document.getElementById(badgeId).classList.remove('hidden');
+    }
+    if (onFile) { onFile(f); return; }
+    if (!textareaId || !onRead) return;
+    const text = await onRead(f);
+    if (text) document.getElementById(textareaId).value = text;
+  }
+}
+
+async function readDoc(f) {
+  try {
+    if (f.name.match(/\.txt$/i)) return await f.text();
+    if (f.name.match(/\.docx?$/i)) {
+      const buf = await f.arrayBuffer();
+      const r = await mammoth.extractRawText({ arrayBuffer: buf });
+      return r.value;
+    }
+    if (f.name.match(/\.pdf$/i)) return await readPDF(f);
+    return await f.text();
+  } catch(e) { alert('Файл унших алдаа: '+e.message); return ''; }
+}
+
+async function readPDF(f) {
+  try {
+    const buf = await f.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(s => s.str).join(' ') + '\n';
+    }
+    return text.trim();
+  } catch(e) { return ''; }
+}
+
+async function readImageAsBase64(f) {
+  return new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = e => res(e.target.result.split(',')[1]);
+    reader.onerror = rej;
+    reader.readAsDataURL(f);
+  });
+}
+
+// ── SECTION 1: CONTRACT REVIEW ───────────────────
+async function contractReview() {
+  const text = document.getElementById('cr-text').value.trim();
+  if (!text) { alert('Гэрээний текст оруулна уу'); return; }
+  const model = document.getElementById('cr-model').value;
+  const ctype = document.getElementById('cr-type').value;
+  const juris = document.getElementById('cr-juris').value;
+  const jurisLabel = juris==='mn' ? 'Монголын хуулийн хүрээнд (Иргэний хууль 2002, Хөдөлмөрийн хууль, Компанийн тухай хууль, Гэр бүлийн тухай хууль)'
+    : juris==='intl' ? 'Олон улсын стандартын хүрээнд (CISG, UNIDROIT, ICC)'
+    : 'Монголын болон олон улсын хуулийн хүрээнд';
+  const prompt = `Та Монголын болон олон улсын гэрээний хуулийн мэргэжлийн зөвлөх юм.
+${jurisLabel} дараах гэрээг шинжилнэ үү.${ctype!=='auto'?` Гэрээний төрөл: ${ctype}.`:''}
+ЧУХАЛ: legalinfo.mn сайтын хүчинтэй хуулиудыг ашиглан хуулийн зүйл, заалтыг яг зөв дурдна уу.
+Хариултыг гэрээний хэлбэрт (МН/EN) тохируулна уу.
+
+ГЭРЭЭ:
+---
+${text.slice(0,14000)}
+---
+
+Дараах бүтэцтэй дэлгэрэнгүй хянасан тайлан бэлдэнэ үү:
+
+## ЕРӨНХИЙ ҮНЭЛГЭЭ
+Оноо: /100
+Хэргийн төрөл:
+Хэл:
+Ерөнхий дүн:
+
+## 🔴 ӨНДӨР ЭРСДЭЛТЭЙ ЗААЛТУУД
+(хуулийн зөрчил, том эрсдэл бүхий заалт бүрд)
+- Заалт: [аль зүйл/хэсэг]
+- Асуудал:
+- Санал:
+- Хуулийн үндэслэл: [legalinfo.mn дээрх хуулийн нэр, зүйл заалт]
+
+## 🟡 ЗАСВАР ШААРДЛАГАТАЙ
+(дунд зэргийн асуудал)
+
+## 🔵 САЙЖРУУЛАХ БОЛОМЖ
+
+## ❌ ДУТУУ ЗААЛТУУД
+(байх ёстой боловч байхгүй стандарт заалтууд)
+
+## ✅ САЙН ЗААЛТУУД
+
+## НИЙТ ДҮГНЭЛТ ба ЗӨВЛӨМЖ`;
+
+  document.getElementById('cr-loading').classList.remove('hidden');
+  document.getElementById('cr-result').classList.add('hidden');
+  document.querySelector('#section-contracts button.btn-primary').disabled = true;
+  try {
+    const result = await callClaude(model, prompt);
+    document.getElementById('cr-output').textContent = result;
+    document.getElementById('cr-result').classList.remove('hidden');
+    document.getElementById('cr-result').scrollIntoView({behavior:'smooth'});
+  } catch(e) { alert('Алдаа: '+e.message); }
+  finally { document.getElementById('cr-loading').classList.add('hidden');
+    document.querySelector('#section-contracts button.btn-primary').disabled = false; }
+}
+
+// ── CONTRACT SUGGESTIONS ─────────────────────────
+async function contractSuggest() {
+  const text = document.getElementById('cs-text').value.trim();
+  if (!text) { alert('Гэрээний текст оруулна уу'); return; }
+  const model = document.getElementById('cs-model').value;
+  const side  = document.getElementById('cs-side').value;
+  const dir   = document.getElementById('cs-direction').value;
+  const prompt = `Та Монголын гэрээний хуулийн мэргэжлийн зөвлөх юм.
+Дараах гэрээнд засвар, нэмэлт оруулах санал боловсруулна уу.
+Чиглэл: ${side}. ${dir?'Нэмэлт хүсэлт: '+dir:''}
+legalinfo.mn дээрх Монголын хүчинтэй хуулиудыг ашиглана уу.
+
+ГЭРЭЭ:
+---
+${text.slice(0,12000)}
+---
+
+Засварын санал гаргахдаа дараах форматыг ашиглана уу:
+
+## ЗАСВАРЫН НИЙТ ТОЙМ
+
+## ЗАСВАРЫН САНАЛ (ЗААЛТ ТУС БҮРД)
+
+### [Заалтын дугаар эсвэл нэр]
+**Одоогийн текст:**
+[одоогийн заалт]
+
+**Санал болгосон текст:**
+[шинэ заалт]
+
+**Засварын шалтгаан:**
+[яагаад засах шаардлагатай, ямар хуульд суурилсан]
+
+**Хуулийн үндэслэл:** [legalinfo.mn-ийн хуулийн нэр, зүйл]
+
+## НЭМЭХ ШААРДЛАГАТАЙ ЗААЛТУУД
+(одоо байхгүй боловч нэмэх зөвлөмж)
+
+## УСТГАХ/ХӨНГӨВЧЛӨХ ЗААЛТУУД
+
+Хариултыг гэрээний хэлбэрт (МН/EN) тохируулна уу.`;
+
+  document.getElementById('cs-loading').classList.remove('hidden');
+  document.getElementById('cs-result').classList.add('hidden');
+  try {
+    const r = await callClaude(model, prompt);
+    document.getElementById('cs-output').textContent = r;
+    document.getElementById('cs-result').classList.remove('hidden');
+    document.getElementById('cs-result').scrollIntoView({behavior:'smooth'});
+  } catch(e) { alert('Алдаа: '+e.message); }
+  finally { document.getElementById('cs-loading').classList.add('hidden'); }
+}
+
+// ── CONTRACT DRAFT ───────────────────────────────
+async function contractDraft() {
+  const ctype   = document.getElementById('cd-type').value;
+  const lang    = document.getElementById('cd-lang').value;
+  const party1  = document.getElementById('cd-party1').value;
+  const party2  = document.getElementById('cd-party2').value;
+  const details = document.getElementById('cd-details').value;
+  const model   = document.getElementById('cd-model').value;
+  if (!party1 || !party2) { alert('Талуудын нэрийг оруулна уу'); return; }
+  const langLabel = lang==='mn'?'Монгол хэлээр':lang==='en'?'English':'Монгол болон Англи хэл хавсарсан (МН / EN)';
+  const prompt = `Та Монголын хуулийн мэргэжлийн зөвлөх юм.
+Дараах мэдээлэлд үндэслэн ${ctype} бэлдэнэ үү.
+Хэл: ${langLabel}
+legalinfo.mn дээрх хүчинтэй Монголын хуулиудын дагуу стандарт бүрэн гэрээний төсөл бичнэ үү.
+
+НЭГ ТАЛ: ${party1}
+НӨГӨӨ ТАЛ: ${party2}
+ГОЛ НӨХЦӨЛ: ${details}
+
+Бүрэн гэрээний төсөл дараах хэсэгтэй байна:
+1. Гэрээний оршил (огноо, газар, талуудын мэдээлэл)
+2. Нэр томьёо, тодорхойлолт
+3. Гэрээний зүйл, агуулга
+4. Үнэ, төлбөрийн нөхцөл
+5. Талуудын эрх, үүрэг
+6. Гэрээний хугацаа
+7. Хариуцлага, торгууль
+8. Дааман даалгавар (force majeure)
+9. Нууцлал
+10. Маргааныг шийдвэрлэх журам
+11. Гэрээ цуцлах үндэслэл
+12. Бусад нөхцөл
+13. Талуудын гарын үсэг, тамга
+
+Хуулийн үндэслэлийг зүйл бүрд тэмдэглэнэ үү.`;
+
+  document.getElementById('cd-loading').classList.remove('hidden');
+  document.getElementById('cd-result').classList.add('hidden');
+  try {
+    const r = await callClaude(model, prompt);
+    document.getElementById('cd-output').textContent = r;
+    document.getElementById('cd-result').classList.remove('hidden');
+    document.getElementById('cd-result').scrollIntoView({behavior:'smooth'});
+  } catch(e) { alert('Алдаа: '+e.message); }
+  finally { document.getElementById('cd-loading').classList.add('hidden'); }
+}
+
+// ── FILE CONVERSION ──────────────────────────────
+let convertFile_data = null;
+
+function onConvertFile(f) {
+  convertFile_data = f;
+  document.getElementById('cv-options').style.display = 'block';
+  // Auto-select ocr language for images
+  if (f.name.match(/\.(png|jpg|jpeg)$/i)) {
+    document.getElementById('cv-ocrlang').value = 'claude';
+  }
+}
+
+async function convertFile() {
+  const f = convertFile_data;
+  if (!f) { alert('Файл сонгоно уу'); return; }
+
+  document.getElementById('cv-loading').classList.remove('hidden');
+  document.getElementById('cv-result').classList.add('hidden');
+  document.getElementById('cv-btn').disabled = true;
+
+  let text = '';
+  const ocrLang = document.getElementById('cv-ocrlang').value;
+
+  try {
+    if (f.name.match(/\.txt$/i)) {
+      setStatus('Текст файл уншиж байна...');
+      text = await f.text();
+
+    } else if (f.name.match(/\.docx?$/i)) {
+      setStatus('Word файл задалж байна...');
+      const buf = await f.arrayBuffer();
+      const r = await mammoth.extractRawText({ arrayBuffer: buf });
+      text = r.value;
+
+    } else if (f.name.match(/\.pdf$/i)) {
+      setStatus('PDF задалж байна...');
+      text = await readPDF(f);
+      if (!text || text.length < 50) {
+        // PDF may be scanned — use Claude vision
+        setStatus('Зурган PDF — Claude Vision ашиглаж байна...');
+        text = await scanPDFWithClaude(f);
+      }
+
+    } else if (f.name.match(/\.(png|jpg|jpeg)$/i)) {
+      if (ocrLang === 'claude') {
+        setStatus('Claude Vision-оор текст гарган авч байна...');
+        text = await imageToTextClaude(f);
+      } else {
+        setStatus('Tesseract OCR-ээр текст гарган авч байна...');
+        text = await imageToTextTesseract(f, ocrLang);
+      }
+    }
+
+    if (!text || text.trim().length < 5) {
+      text = '[Текст гарган авах боломжгүй — зурган формат эсвэл хамгаалагдсан байж болно]';
+    }
+
+    document.getElementById('cv-output').textContent = text;
+    document.getElementById('cv-result').classList.remove('hidden');
+    document.getElementById('cv-result').scrollIntoView({behavior:'smooth'});
+  } catch(e) { alert('Алдаа: '+e.message); }
+  finally { document.getElementById('cv-loading').classList.add('hidden');
+    document.getElementById('cv-btn').disabled = false; }
+}
+
+function setStatus(msg) { document.getElementById('cv-status').textContent = msg; }
+
+async function imageToTextClaude(f) {
+  const b64  = await readImageAsBase64(f);
+  const mime = f.type || 'image/jpeg';
+  const key  = getKey();
+  if (!key) throw new Error('API key байхгүй');
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:4096,messages:[{role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:mime,data:b64}},
+      {type:'text',text:'Энэ зурган дахь бүх текстийг яг эх хэлбэрээр нь гарган авна уу. Форматыг аль болох хадгална уу. Зөвхөн текст гаргана уу, тайлбар бичихгүй.'}
+    ]}]})
+  });
+  if (!r.ok) throw new Error('Vision API алдаа');
+  const d = await r.json();
+  return d.content[0].text;
+}
+
+async function scanPDFWithClaude(f) {
+  // For scanned PDFs, use Claude if text extraction failed
+  const key = getKey();
+  if (!key) return '[API key байхгүй тул зурган PDF задлах боломжгүй]';
+  try {
+    const buf = await f.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    const page = await pdf.getPage(1);
+    const vp = page.getViewport({scale:2});
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width; canvas.height = vp.height;
+    await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+    const b64 = canvas.toDataURL('image/jpeg',0.85).split(',')[1];
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:4096,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+        {type:'text',text:'Энэ зурган дахь бүх текстийг яг эх хэлбэрээр гарган авна уу.'}
+      ]}]})
+    });
+    const d = await r.json();
+    return d.content[0].text + '\n[Зөвхөн 1-р хуудас — бүх хуудсыг задлахын тулд текстэн PDF ашиглана уу]';
+  } catch(e) { return '[Зурган PDF задлахад алдаа: '+e.message+']'; }
+}
+
+async function imageToTextTesseract(f, lang) {
+  if (typeof Tesseract === 'undefined') throw new Error('Tesseract ачаалаагүй байна');
+  const result = await Tesseract.recognize(f, lang==='mn+eng'?'mon+eng':lang==='mn'?'mon':'eng', {
+    logger: m => { if(m.status==='recognizing text') setStatus(`OCR: ${Math.round(m.progress*100)}%`); }
+  });
+  return result.data.text;
+}
+
+// ── COURT BRIEF ──────────────────────────────────
+async function courtBrief() {
+  const court    = document.getElementById('cb-court').value;
+  const caseNo   = document.getElementById('cb-case-no').value;
+  const plaintiff= document.getElementById('cb-plaintiff').value;
+  const defendant= document.getElementById('cb-defendant').value;
+  const claim    = document.getElementById('cb-claim').value;
+  const docs     = document.getElementById('cb-docs').value.trim();
+  const model    = document.getElementById('cb-model').value;
+  if (!docs && !claim) { alert('Хэргийн материал оруулна уу'); return; }
+
+  const prompt = `Та туршлагатай өмгөөлөгч буюу хуулийн зөвлөх юм.
+legalinfo.mn дээрх Монголын хүчинтэй хуулиудад үндэслэн дараах хэргийн товьёогийг бэлдэнэ үү.
+Хариултыг материалын хэлбэрт (МН/EN) тохируулна уу.
+
+ХЭРГИЙН МЭДЭЭЛЭЛ:
+Шүүх: ${court||'–'}
+Хэргийн дугаар: ${caseNo||'–'}
+Нэхэмжлэгч: ${plaintiff||'–'}
+Хариуцагч: ${defendant||'–'}
+Нэхэмжлэлийн шаардлага: ${claim||'–'}
+
+ХЭРГИЙН МАТЕРИАЛ:
+---
+${docs.slice(0,13000)}
+---
+
+Дараах жишгийн дагуу хэргийн товьёог бэлдэнэ үү:
+
+## ХЭРГИЙН ТОВЬЁОГ
+
+### Ерөнхий мэдээлэл (хүснэгт хэлбэрт)
+| Зүйл | Утга |
+|------|------|
+| Шүүх | |
+| Хэргийн дугаар | |
+| Нэхэмжлэгч | |
+| Хариуцагч | |
+| Нэхэмжлэлийн шаардлага | |
+
+### 0. Процессын одоогийн байдал
+
+### 1. Хэргийн он цагийн дараалал
+| Огноо | Үйл явдал | Баримт/Байршил |
+|-------|-----------|----------------|
+
+### 2. Хэргийн гол баримт, нотлох баримт
+| Нотлох баримт | Юу нотлох | Байршил |
+|---------------|-----------|---------|
+
+### 3. Хуулийн үндэслэл
+(legalinfo.mn-ийн хуулиудад үндэслэн)
+
+### 4. Байр суурь, стратеги
+
+### 5. Эрсдэл, сул тал`;
+
+  document.getElementById('cb-loading').classList.remove('hidden');
+  document.getElementById('cb-result').classList.add('hidden');
+  try {
+    const r = await callClaude(model, prompt);
+    document.getElementById('cb-output').textContent = r;
+    document.getElementById('cb-result').classList.remove('hidden');
+    document.getElementById('cb-result').scrollIntoView({behavior:'smooth'});
+  } catch(e) { alert('Алдаа: '+e.message); }
+  finally { document.getElementById('cb-loading').classList.add('hidden'); }
+}
+
+// ── COURT HEARING PREP ───────────────────────────
+async function courtHearing() {
+  const date     = document.getElementById('ch-date').value;
+  const judge    = document.getElementById('ch-judge').value;
+  const position = document.getElementById('ch-position').value;
+  const docs     = document.getElementById('ch-docs').value.trim();
+  const model    = document.getElementById('ch-model').value;
+  if (!docs) { alert('Хэргийн материал оруулна уу'); return; }
+
+  const prompt = `Та туршлагатай өмгөөлөгч юм.
+Дараах хэргийн материалд үндэслэн шүүх хуралдааны бэлтгэлийн ӨМГӨӨЛЛИЙН ДОТООД материал бэлдэнэ үү.
+legalinfo.mn дээрх Монголын хүчинтэй хуулиудыг ашиглана уу.
+Хариултыг материалын хэлбэрт (МН/EN) тохируулна уу.
+
+Шүүх хуралдааны огноо: ${date||'–'}
+Шүүгч: ${judge||'–'}
+Байр суурь/чиглэл: ${position||'–'}
+
+ХЭРГИЙН МАТЕРИАЛ:
+---
+${docs.slice(0,13000)}
+---
+
+Дараах бүтэцтэй ШҮҮХ ХУРЛЫН БЭЛТГЭЛ материал бичнэ үү:
+
+## ӨМГӨӨЛЛИЙН ДОТООД БЭЛТГЭЛ
+
+### 0. Процессын одоогийн байдал
+- Ямар шат дээр байна
+- Ялсан/алдсан байдал
+- Манайд ашигтай тогтоогдсон баримт
+
+### 1. Хуралдааны зорилт
+(юуг хэлэлцэх, ямар шийдвэр гаргуулах зорилготой)
+
+### 2. Нотлох баримтын шинжилгээ
+| Баримт | Юу нотлох | Хэрхэн танилцуулах |
+|--------|-----------|-------------------|
+
+### 3. Хариуцагчаас асуух асуулт
+(тус бүр нь стратегитай, хариуцагчид ашиггүй баримт гаргуулахад чиглэсэн)
+
+### 4. Хуулийн үндэслэл
+(legalinfo.mn-ийн хуулиудыг яг зүйл, заалт хүртэл дурдна)
+
+### 5. Хариуцагчийн болзошгүй аргумент ба бидний хариу
+
+### 6. Шүүгчийн болзошгүй асуулт ба бэлтгэл хариу
+
+### 7. Хуралдааны дараа хийх ажиллагаа`;
+
+  document.getElementById('ch-loading').classList.remove('hidden');
+  document.getElementById('ch-result').classList.add('hidden');
+  try {
+    const r = await callClaude(model, prompt);
+    document.getElementById('ch-output').textContent = r;
+    document.getElementById('ch-result').classList.remove('hidden');
+    document.getElementById('ch-result').scrollIntoView({behavior:'smooth'});
+  } catch(e) { alert('Алдаа: '+e.message); }
+  finally { document.getElementById('ch-loading').classList.add('hidden'); }
+}
+
+// ── SIMILAR CASES ────────────────────────────────
+async function similarCases() {
+  const simType = document.getElementById('sim-type').value;
+  const desc    = document.getElementById('sim-desc').value.trim();
+  const model   = document.getElementById('sim-model').value;
+  if (!desc) { alert('Хэргийн мэдээлэл оруулна уу'); return; }
+
+  const prompt = `Та Монголын шүүхийн практикийг сайн мэддэг хуулийн мэргэжилтэн юм.
+Дараах хэрэгтэй ижил төстэй Монголын шүүхийн шийдвэрүүдийг санал болгоно уу.
+legalinfo.mn-ийн хуулиудыг ашиглана уу.
+Хариултыг хэргийн хэлбэрт тохируулна уу.
+
+Хэргийн ангилал: ${simType}
+Хэргийн тодорхойлолт:
+${desc}
+
+Дараах форматаар ижил төстэй шийдвэрүүдийг санал болгоно уу:
+
+## ИЖИЛ ТӨСТЭЙ ШҮҮХИЙН ШИЙДВЭРҮҮД
+
+### 1. Шийдвэр [дугаар эсвэл ойролцоо жил]
+**Шүүх:**
+**Маргааны цөм:**
+**Ижил байдал:** (таны хэрэгтэй ямар хувьд ижил)
+**Шийдвэрийн үр дүн:**
+**Таны хэрэгт ашиглах боломж:**
+**Хуулийн үндэслэл:** (ашигласан хуулийн заалт)
+
+### 2. [дараагийн шийдвэр]
+...
+
+## ХАМААРАЛТАЙ ХУУЛИЙН ЗААЛТУУД
+(legalinfo.mn-ийн яг заалт)
+
+## ПРАКТИК ЗӨВЛӨМЖ
+(энэ төрлийн хэрэгт ямар стратеги амжилттай байдаг)
+
+АНХААРУУЛГА: Монголын шүүхийн шийдвэрийн нэгдсэн мэдээллийн санд хандах нэвтрэлт хязгаарлагдмал тул шийдвэрүүдийг shuukh.mn болон legalinfo.mn-ийн хайлтаар нягтлаарай.`;
+
+  document.getElementById('sim-loading').classList.remove('hidden');
+  document.getElementById('sim-result').classList.add('hidden');
+  try {
+    const r = await callClaude(model, prompt);
+    document.getElementById('sim-output').textContent = r;
+    document.getElementById('sim-result').classList.remove('hidden');
+    document.getElementById('sim-result').scrollIntoView({behavior:'smooth'});
+  } catch(e) { alert('Алдаа: '+e.message); }
+  finally { document.getElementById('sim-loading').classList.add('hidden'); }
+}
+
+// ── DOWNLOAD HELPERS ─────────────────────────────
+function dlText(srcId, fname) {
+  const text = document.getElementById(srcId).textContent;
+  if (!text) return;
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),
+    download: fname+'_'+new Date().toISOString().slice(0,10)+'.txt'
+  });
+  a.click();
+}
+
+function dlDoc(srcId, fname) {
+  const text = document.getElementById(srcId).textContent;
+  if (!text) return;
+  // Generate Word-compatible HTML
+  const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head><meta charset='utf-8'><style>
+body{font-family:Arial,sans-serif;font-size:11pt;line-height:1.6;margin:2cm}
+h1,h2,h3{font-weight:bold;margin-top:14pt;margin-bottom:6pt}
+h1{font-size:14pt}h2{font-size:13pt}h3{font-size:12pt}
+table{border-collapse:collapse;width:100%;margin:8pt 0}
+td,th{border:1px solid #999;padding:4pt 6pt;font-size:10pt}
+th{background:#e8e8e8;font-weight:bold}
+</style></head><body><pre style='white-space:pre-wrap;font-family:Arial,sans-serif;font-size:11pt'>${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></body></html>`;
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([html],{type:'application/msword;charset=utf-8'})),
+    download: fname+'_'+new Date().toISOString().slice(0,10)+'.doc'
+  });
+  a.click();
+}
+</script>
+</body>
+</html>
